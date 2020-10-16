@@ -26,7 +26,7 @@ curl = { version = "0.4.33", features = ["ssl"] }
 openssl = "0.10.30"
 #openssl-sys = { version = "0.9.0", features = ["vendored"] }
 webpki = { version = "0.21.0" }
-rustls = { version = "0.18.0" }
+#rustls = { version = "0.18.0" }
 pin-utils = "0.1.0"
 serde = { version ="1.0.103", features = ['derive'] }
 serde_json = "1.0.40"

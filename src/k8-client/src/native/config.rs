@@ -19,6 +19,8 @@ use openssl::pkey::PKey;
 
 pub type IsahcBuilder = ClientConfigBuilder<IsahcConfigBuilder>;
 
+const IDENTITY_PASSWORD: &str = " ";
+
 fn load_pk12_certificate<P1, P2>(cert_path: P1, key_path: P2) -> Result<Vec<u8>, IoError>
     where P1: AsRef<Path>,
           P2: AsRef<Path>,
@@ -30,7 +32,7 @@ fn load_pk12_certificate<P1, P2>(cert_path: P1, key_path: P2) -> Result<Vec<u8>,
         .map_err(|e| IoError::new(ErrorKind::InvalidData, format!("Client Cert invalid PEM: {}", e)))?;
     let pkey = PKey::private_key_from_pem(&private_key)
         .map_err(|e| IoError::new(ErrorKind::InvalidData, format!("Private Key invalid PEM: {}", e)))?;
-    let p12 = Pkcs12::builder().build("", "kubeconfig", &pkey, &x509)
+    let p12 = Pkcs12::builder().build(IDENTITY_PASSWORD, "kubeconfig", &pkey, &x509)
         .map_err(|e| IoError::new(ErrorKind::InvalidData, format!("Failed to create Pkcs12: {}", e)))?;
     let p12_der = p12.to_der()
         .map_err(|e| IoError::new(ErrorKind::Other, format!("Failed to write p12 to der: {}", e)))?;
@@ -50,7 +52,7 @@ where
     p12_file.write_all(&p12_der)?;
     p12_file.flush()?;
 
-    Ok(ClientCertificate::p12_file(&p12_path, "".to_string()))
+    Ok(ClientCertificate::p12_file(&p12_path, IDENTITY_PASSWORD.to_string()))
 }
 
 fn load_ca_certificate<P>(ca_path: P) -> CaCertificate
@@ -120,6 +122,6 @@ mod tests {
 
         let p12 = load_pk12_certificate(client_cert_path, client_key_path).expect("Should get p12");
         let p12_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data/client.p12");
-        std::fs::write(&p12_path, &p12);
+        std::fs::write(&p12_path, &p12).unwrap();
     }
 }
