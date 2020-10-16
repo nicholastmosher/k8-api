@@ -19,13 +19,12 @@ use openssl::pkey::PKey;
 
 pub type IsahcBuilder = ClientConfigBuilder<IsahcConfigBuilder>;
 
-/// load client certificate
-fn load_client_certificate<P>(client_crt_path: P, client_key_path: P) -> Result<ClientCertificate, IoError>
-where
-    P: AsRef<Path>,
+fn load_pk12_certificate<P1, P2>(cert_path: P1, key_path: P2) -> Result<Vec<u8>, IoError>
+    where P1: AsRef<Path>,
+          P2: AsRef<Path>,
 {
-    let client_cert = std::fs::read(client_crt_path)?;
-    let private_key = std::fs::read(client_key_path)?;
+    let client_cert = std::fs::read(cert_path)?;
+    let private_key = std::fs::read(key_path)?;
 
     let x509 = X509::from_pem(&client_cert)
         .map_err(|e| IoError::new(ErrorKind::InvalidData, format!("Client Cert invalid PEM: {}", e)))?;
@@ -35,6 +34,16 @@ where
         .map_err(|e| IoError::new(ErrorKind::InvalidData, format!("Failed to create Pkcs12: {}", e)))?;
     let p12_der = p12.to_der()
         .map_err(|e| IoError::new(ErrorKind::Other, format!("Failed to write p12 to der: {}", e)))?;
+
+    Ok(p12_der)
+}
+
+/// load client certificate
+fn load_client_certificate<P>(client_crt_path: P, client_key_path: P) -> Result<ClientCertificate, IoError>
+where
+    P: AsRef<Path>,
+{
+    let p12_der = load_pk12_certificate(&client_crt_path, &client_key_path)?;
 
     let p12_path = std::env::temp_dir().join("k8.p12");
     let mut p12_file = std::fs::File::create(&p12_path)?;
@@ -88,5 +97,29 @@ impl ConfigBuilder for IsahcConfigBuilder {
         debug!("retrieved client certs from kubeconfig");
         let inner = self.0.ssl_client_certificate(client_certificate);
         Ok(Self(inner))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn get_test_certificate() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data/client.crt")
+    }
+
+    fn get_test_key() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data/client.key")
+    }
+
+    #[test]
+    fn test_verify_certs() {
+        let client_cert_path = get_test_certificate();
+        let client_key_path = get_test_key();
+
+        let p12 = load_pk12_certificate(client_cert_path, client_key_path).expect("Should get p12");
+        let p12_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_data/client.p12");
+        std::fs::write(&p12_path, &p12);
     }
 }
