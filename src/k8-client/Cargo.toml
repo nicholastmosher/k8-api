@@ -22,8 +22,9 @@ base64 = { version = "0.12.0" }
 futures-util = { version = "0.3.5"}
 rand = { version = "0.7.3" }
 isahc = { version = "0.9.9", features = ["json","static-curl"]}
-curl = { version = "0.4.33", features = ["mesalink"] }
-openssl-sys = { version = "0.9.0", features = ["vendored"] }
+curl = { version = "0.4.33", features = ["ssl"] }
+openssl = "0.10.30"
+#openssl-sys = { version = "0.9.0", features = ["vendored"] }
 webpki = { version = "0.21.0" }
 rustls = { version = "0.18.0" }
 pin-utils = "0.1.0"
